@@ -1,7 +1,7 @@
 import { AuthResponse, LoginCredentials, RegisterData, User } from '../types/Auth';
+import { setToken, removeToken } from '../utils/token';
 
 const API_BASE_URL = 'http://localhost:5000/api/auth';
-import { setToken, removeToken } from '../utils/token';
 
 class AuthApiService {
   async register(data: RegisterData): Promise<{ user: User; token: string }> {
