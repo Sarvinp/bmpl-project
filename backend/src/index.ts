@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { connectDatabase } from './config/database';
+import authRoutes from './routes/authRoutes';
 import bmplRoutes from './routes/bmplRoutes';
 
 dotenv.config();
@@ -18,12 +20,27 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Backend is running!' });
 });
 
-// BMPL API routes
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
+// BMPL API routes (protected - requires authentication)
 app.use('/api/bmpl', bmplRoutes);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}/api/bmpl`);
-});
+// Connect to database and start server
+const startServer = async () => {
+  try {
+    await connectDatabase();
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+      console.log(`📡 API available at http://localhost:${PORT}/api/bmpl`);
+      console.log(`🔐 Auth API available at http://localhost:${PORT}/api/auth`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 

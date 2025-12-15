@@ -1,103 +1,130 @@
 import { BmplItem, CreateBmplItemDto, UpdateBmplItemDto } from '../types/BmplItem';
-import * as fs from 'fs';
-import * as path from 'path';
+import { BmplItem as BmplItemModel, IBmplItem } from '../models/BmplItem';
 
-const DATA_FILE = path.join(__dirname, '../../data/bmpl-items.json');
-
-// Ensure data directory exists
-const dataDir = path.dirname(DATA_FILE);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+export interface PaginationOptions {
+  page: number;
+  limit: number;
 }
 
-// Initialize data file if it doesn't exist
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2));
+export interface SearchOptions {
+  query?: string;
+  status?: 'active' | 'completed' | 'archived';
+  priority?: 'low' | 'medium' | 'high';
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
 class BmplService {
-  private items: BmplItem[] = [];
+  async getAllItems(
+    userId: string,
+    pagination: PaginationOptions = { page: 1, limit: 10 },
+    search: SearchOptions = {}
+  ): Promise<PaginatedResult<BmplItem>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
 
-  constructor() {
-    this.loadItems();
-  }
+    // Build query
+    const query: any = { user: userId };
 
-  private loadItems(): void {
-    try {
-      const data = fs.readFileSync(DATA_FILE, 'utf-8');
-      this.items = JSON.parse(data);
-    } catch (error) {
-      console.error('Error loading items:', error);
-      this.items = [];
+    // Add status filter
+    if (search.status) {
+      query.status = search.status;
     }
-  }
 
-  private saveItems(): void {
-    try {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(this.items, null, 2));
-    } catch (error) {
-      console.error('Error saving items:', error);
-      throw new Error('Failed to save items');
+    // Add priority filter
+    if (search.priority) {
+      query.priority = search.priority;
     }
-  }
 
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
+    // Add text search using regex (case-insensitive)
+    if (search.query && search.query.trim()) {
+      const searchRegex = new RegExp(search.query.trim(), 'i');
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+      ];
+    }
 
-  getAllItems(): BmplItem[] {
-    return this.items;
-  }
+    // Execute query with pagination
+    const [items, total] = await Promise.all([
+      BmplItemModel.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      BmplItemModel.countDocuments(query),
+    ]);
 
-  getItemById(id: string): BmplItem | null {
-    return this.items.find(item => item.id === id) || null;
-  }
+    const totalPages = Math.ceil(total / limit);
 
-  createItem(dto: CreateBmplItemDto): BmplItem {
-    const now = new Date().toISOString();
-    const newItem: BmplItem = {
-      id: this.generateId(),
-      title: dto.title,
-      description: dto.description,
-      status: 'active',
-      priority: dto.priority || 'medium',
-      createdAt: now,
-      updatedAt: now,
+    return {
+      data: items.map(this.mapToBmplItem),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
     };
-
-    this.items.push(newItem);
-    this.saveItems();
-    return newItem;
   }
 
-  updateItem(id: string, dto: UpdateBmplItemDto): BmplItem | null {
-    const itemIndex = this.items.findIndex(item => item.id === id);
-    if (itemIndex === -1) {
-      return null;
-    }
+  async getItemById(id: string, userId: string): Promise<BmplItem | null> {
+    const item = await BmplItemModel.findOne({ _id: id, user: userId }).lean();
+    return item ? this.mapToBmplItem(item) : null;
+  }
 
-    const updatedItem: BmplItem = {
-      ...this.items[itemIndex],
+  async createItem(userId: string, dto: CreateBmplItemDto): Promise<BmplItem> {
+    const newItem = new BmplItemModel({
       ...dto,
-      updatedAt: new Date().toISOString(),
-    };
+      user: userId,
+    });
 
-    this.items[itemIndex] = updatedItem;
-    this.saveItems();
-    return updatedItem;
+    const savedItem = await newItem.save();
+    return this.mapToBmplItem(savedItem.toObject());
   }
 
-  deleteItem(id: string): boolean {
-    const itemIndex = this.items.findIndex(item => item.id === id);
-    if (itemIndex === -1) {
-      return false;
-    }
+  async updateItem(
+    id: string,
+    userId: string,
+    dto: UpdateBmplItemDto
+  ): Promise<BmplItem | null> {
+    const item = await BmplItemModel.findOneAndUpdate(
+      { _id: id, user: userId },
+      { ...dto, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).lean();
 
-    this.items.splice(itemIndex, 1);
-    this.saveItems();
-    return true;
+    return item ? this.mapToBmplItem(item) : null;
+  }
+
+  async deleteItem(id: string, userId: string): Promise<boolean> {
+    const result = await BmplItemModel.deleteOne({ _id: id, user: userId });
+    return result.deletedCount > 0;
+  }
+
+  private mapToBmplItem(item: any): BmplItem {
+    return {
+      id: item._id.toString(),
+      title: item.title,
+      description: item.description,
+      status: item.status,
+      priority: item.priority,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    };
   }
 }
 
 export const bmplService = new BmplService();
-
