@@ -1,0 +1,146 @@
+.bmpl-item-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.bmpl-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.item-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2c3e50;
+  flex: 1;
+  min-width: 200px;
+}
+
+.item-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.priority-badge,
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+.item-description {
+  color: #555;
+  margin: 12px 0;
+  line-height: 1.6;
+  min-height: 40px;
+}
+
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.item-dates {
+  font-size: 0.875rem;
+  color: #777;
+  display: flex;
+  gap: 8px;
+}
+
+.date-label {
+  font-weight: 600;
+}
+
+.item-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.item-actions .btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-complete {
+  background-color: #6bcf7f;
+  color: white;
+}
+
+.btn-complete:hover {
+  background-color: #5ab86d;
+}
+
+.btn-activate {
+  background-color: #4dabf7;
+  color: white;
+}
+
+.btn-activate:hover {
+  background-color: #3b9ae1;
+}
+
+.btn-edit {
+  background-color: #ffd93d;
+  color: #2c3e50;
+}
+
+.btn-edit:hover {
+  background-color: #e6c434;
+}
+
+.btn-delete {
+  background-color: #ff6b6b;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #e55555;
+}
+
+@media (max-width: 768px) {
+  .item-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .item-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .item-actions .btn {
+    flex: 1;
+  }
+}
+
